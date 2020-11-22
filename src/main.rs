@@ -64,6 +64,7 @@ struct Obstacle {
 impl Obstacle {
     fn new(x: i32, score: i32) -> Self {
         let mut random = RandomNumberGenerator::new();
+        let x_diff = random.range(0, SCREEN_WIDTH / 2);
         let mut height = random.range(FLOOR-5, FLOOR+1);
         let mut velocity = random.range(-1.5, score as f32 * 0.02);
         if velocity < 0.0 {
@@ -71,7 +72,7 @@ impl Obstacle {
             height = FLOOR;
         }
         Obstacle {
-            x,
+            x: x + x_diff,
             y: height,
             velocity,
             symbol: if velocity > 0.0 { '<' } else {'!'},
@@ -166,15 +167,13 @@ impl State {
         let newscore = len - newlen;
         self.score += newscore as i32;
 
-        if (self.obstacles[newlen - 1].x - self.player.x) < (SCREEN_WIDTH / 2) {
+        if (self.obstacles[newlen - 1].x - self.player.x) < (SCREEN_WIDTH * 9 / 10) {
             self.obstacles.push(Obstacle::new(self.player.x + SCREEN_WIDTH, self.score));
         }
 
         ctx.print(0, 0, "Press SPACE to jump.");
         ctx.print(0, 1, &format!("Score: {}", self.score));
-
-        ctx.print(0, 2, &format!("Obstacles: {}", len));
-        ctx.print(0, 3, &format!("{},{} x {},{}", self.player.x, self.player.y, self.obstacles[0].x, self.obstacles[0].y));
+        ctx.print(0, 2, &format!("Obstacles: {}", newlen));
     }
 
     fn restart(&mut self) {
