@@ -58,13 +58,14 @@ struct Obstacle {
     y: i32,
     velocity: f32,
     symbol: char,
+    color: (u8, u8, u8),
 }
 
 impl Obstacle {
     fn new(x: i32, score: i32) -> Self {
         let mut random = RandomNumberGenerator::new();
         let mut height = random.range(FLOOR-5, FLOOR+1);
-        let mut velocity = random.range(-1.5, score as f32 * 0.2);
+        let mut velocity = random.range(-1.5, score as f32 * 0.02);
         if velocity < 0.0 {
             velocity = 0.0;
             height = FLOOR;
@@ -73,7 +74,8 @@ impl Obstacle {
             x,
             y: height,
             velocity,
-            symbol: if velocity > 0.0 { '<' } else {'!'}
+            symbol: if velocity > 0.0 { '<' } else {'!'},
+            color: if velocity > 0.0 { BROWN1 } else { GREEN },
         }
     }
     fn render(&mut self, ctx: &mut BTerm, player_x: i32, color: (u8, u8, u8)) {
@@ -82,7 +84,7 @@ impl Obstacle {
         ctx.set(
             screen_x,
             self.y,
-            RGB::named(BROWN1),
+            self.color,
             color,
             to_cp437(self.symbol),
         );
@@ -113,12 +115,12 @@ impl State {
         }
     }
     fn sky(&mut self) -> (u8, u8, u8) {
-        let modscore = self.score % 5;
+        let modscore = self.score % 50;
         match modscore {
-            0 => CORNFLOWERBLUE,
-            1 => MEDIUM_BLUE,
-            2 => DARK_BLUE,
-            3 => MIDNIGHT_BLUE,
+            0..=10 => CORNFLOWERBLUE,
+            11..=20 => MEDIUM_BLUE,
+            21..=30 => DARK_BLUE,
+            31..=40 => MIDNIGHT_BLUE,
             _ => SLATE_BLUE,
         }
     }
