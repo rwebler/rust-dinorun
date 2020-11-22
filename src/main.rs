@@ -57,15 +57,23 @@ struct Obstacle {
     x: i32,
     y: i32,
     velocity: f32,
+    symbol: char,
 }
 
 impl Obstacle {
     fn new(x: i32) -> Self {
         let mut random = RandomNumberGenerator::new();
+        let mut height = random.range(FLOOR-5, FLOOR+1);
+        let mut velocity = random.range(-1.5, 2.0);
+        if velocity < 0.0 {
+            velocity = 0.0;
+            height = FLOOR;
+        }
         Obstacle {
             x,
-            y: random.range(FLOOR-5, FLOOR+1),
-            velocity: random.range(0.0, 2.0),
+            y: height,
+            velocity,
+            symbol: if velocity > 0.0 { '<' } else {'!'}
         }
     }
     fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
@@ -76,7 +84,7 @@ impl Obstacle {
             self.y,
             RGB::named(RED),
             RGB::named(BLACK),
-            to_cp437('!'),
+            to_cp437(self.symbol),
         );
     }
     fn hit_obstacle(&mut self, player: &Player) -> bool {
@@ -126,16 +134,15 @@ impl State {
         let len = self.obstacles.len();
         for obstacle in &mut self.obstacles {
             obstacle.render(ctx, self.player.x);
+            if obstacle.hit_obstacle(&self.player) {
+                self.mode = GameMode::End;
+            }
         }
         let diff = self.player.x - 5;
         self.obstacles.retain(|o| o.x > diff);
         let newlen = self.obstacles.len();
         let newscore = len - newlen;
         self.score += newscore as i32;
-
-        if self.obstacles[0].hit_obstacle(&self.player) {
-            self.mode = GameMode::End;
-        }
 
         if (self.obstacles[newlen - 1].x - self.player.x) < (SCREEN_WIDTH / 2) {
             self.obstacles.push(Obstacle::new(self.player.x + SCREEN_WIDTH));
