@@ -28,12 +28,12 @@ impl Player {
             velocity: 0.0,
         }
     }
-    fn render(&mut self, ctx: &mut BTerm) {
+    fn render(&mut self, ctx: &mut BTerm, color: (u8, u8, u8)) {
         ctx.set(
             PLAYER_COLUMN,
             self.y,
             RGB::named(YELLOW),
-            RGB::named(BLACK),
+            color,
             to_cp437('@'),
         );
     }
@@ -61,10 +61,10 @@ struct Obstacle {
 }
 
 impl Obstacle {
-    fn new(x: i32) -> Self {
+    fn new(x: i32, score: i32) -> Self {
         let mut random = RandomNumberGenerator::new();
         let mut height = random.range(FLOOR-5, FLOOR+1);
-        let mut velocity = random.range(-1.5, 2.0);
+        let mut velocity = random.range(-1.5, score as f32 * 0.2);
         if velocity < 0.0 {
             velocity = 0.0;
             height = FLOOR;
@@ -76,14 +76,14 @@ impl Obstacle {
             symbol: if velocity > 0.0 { '<' } else {'!'}
         }
     }
-    fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
+    fn render(&mut self, ctx: &mut BTerm, player_x: i32, color: (u8, u8, u8)) {
         self.x -= self.velocity as i32;
         let screen_x = self.x - player_x;
         ctx.set(
             screen_x,
             self.y,
-            RGB::named(RED),
-            RGB::named(BLACK),
+            RGB::named(BROWN1),
+            color,
             to_cp437(self.symbol),
         );
     }
@@ -103,7 +103,7 @@ struct State {
 impl State {
     fn new() -> Self {
         let mut obstacles = Vec::new();
-        obstacles.push(Obstacle::new(SCREEN_WIDTH));
+        obstacles.push(Obstacle::new(SCREEN_WIDTH, 0));
         State {
             player: Player::new(PLAYER_COLUMN, FLOOR),
             frame_time: 0.0,
@@ -112,8 +112,28 @@ impl State {
             score: 0,
         }
     }
+    fn sky(&mut self) -> (u8, u8, u8) {
+        let modscore = self.score % 5;
+        match modscore {
+            0 => CORNFLOWERBLUE,
+            1 => MEDIUM_BLUE,
+            2 => DARK_BLUE,
+            3 => MIDNIGHT_BLUE,
+            _ => SLATE_BLUE,
+        }
+    }
     fn play(&mut self, ctx: &mut BTerm) {
-        ctx.cls_bg(NAVY);
+        let color = self.sky();
+        ctx.cls_bg(color);
+        for i in 0..SCREEN_WIDTH {
+            ctx.set(
+                i,
+                FLOOR+1,
+                RGB::named(GREEN),
+                color,
+                to_cp437('-'),
+            );
+        }
         self.frame_time += ctx.frame_time_ms;
         if self.frame_time > FRAME_DURATION {
             self.frame_time = 0.0;
@@ -130,10 +150,10 @@ impl State {
                 _ => {}
             }
         }
-        self.player.render(ctx);
+        self.player.render(ctx, color);
         let len = self.obstacles.len();
         for obstacle in &mut self.obstacles {
-            obstacle.render(ctx, self.player.x);
+            obstacle.render(ctx, self.player.x, color);
             if obstacle.hit_obstacle(&self.player) {
                 self.mode = GameMode::End;
             }
@@ -145,7 +165,7 @@ impl State {
         self.score += newscore as i32;
 
         if (self.obstacles[newlen - 1].x - self.player.x) < (SCREEN_WIDTH / 2) {
-            self.obstacles.push(Obstacle::new(self.player.x + SCREEN_WIDTH));
+            self.obstacles.push(Obstacle::new(self.player.x + SCREEN_WIDTH, self.score));
         }
 
         ctx.print(0, 0, "Press SPACE to jump.");
@@ -160,7 +180,7 @@ impl State {
         self.frame_time = 0.0;
         self.mode = GameMode::Playing;
         let mut obstacles = Vec::new();
-        obstacles.push(Obstacle::new(SCREEN_WIDTH));
+        obstacles.push(Obstacle::new(SCREEN_WIDTH, 0));
         self.obstacles = obstacles;
         self.score = 0;
     }
